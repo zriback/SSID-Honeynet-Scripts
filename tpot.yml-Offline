@@ -1,0 +1,343 @@
+# T-Pot (Standard)
+# Do not erase ports sections, these are used by /opt/tpot/bin/rules.sh to setup iptables ACCEPT rules for NFQ (honeytrap / glutton)
+version: '2.3'
+
+networks:
+  adbhoney_local:
+  ciscoasa_local:
+  citrixhoneypot_local:
+  conpot_local_IEC104:
+  conpot_local_guardian_ast:
+  conpot_local_ipmi:
+  conpot_local_kamstrup_382:
+  cowrie_local:
+  ddospot_local:
+  dicompot_local:
+  dionaea_local:
+  elasticpot_local:
+  heralding_local:
+  ipphoney_local:
+  mailoney_local:
+  medpot_local:
+  redishoneypot_local:
+  tanner_local:
+  ewsposter_local:
+  sentrypeer_local:
+  spiderfoot_local:
+
+services:
+
+##################
+#### Honeypots
+##################
+
+# Cowrie service
+#  cowrie:
+#    container_name: cowrie
+#    restart: always
+#    tmpfs:
+#     - /tmp/cowrie:uid=2000,gid=2000
+#     - /tmp/cowrie/data:uid=2000,gid=2000
+#    networks:
+#     - cowrie_local
+#    ports:
+#     - "22:22"
+#     - "23:23"
+#    image: "dtagdevsec/cowrie:2204"
+#    read_only: true
+#    volumes:
+#    - /data/cowrie/downloads:/home/cowrie/cowrie/dl
+#     - /data/cowrie/keys:/home/cowrie/cowrie/etc
+#     - /data/cowrie/log:/home/cowrie/cowrie/log
+#     - /data/cowrie/log/tty:/home/cowrie/cowrie/log/tty
+#     - /data/cowrie/conf/userdb.txt:/home/cowrie/cowrie/etc/userdb.txt
+#     - /data/cowrie/conf/cowrie.cfg:/home/cowrie/cowrie/cowrie.cfg
+#     - /data/cowrie/server_transport.py:/home/cowrie/cowrie/src/cowrie/ssh_proxy/server_transport.py
+#     - /opt/tpot/etc/markers:/home/cowrie/markers
+#     - /data/cowrie/client_transport.py:/home/cowrie/cowrie/src/cowrie/ssh_proxy/client_transport.py
+#     - /data/cowrie/ssh.py:/home/cowrie/cowrie/src/cowrie/ssh_proxy/protocols/ssh.py
+
+
+### Snare / Tanner
+### Tanner Redis Service
+#  tanner_redis:
+#    container_name: tanner_redis
+#    restart: always
+#    tty: true
+#    networks:
+#     - tanner_local
+#    image: "dtagdevsec/redis:2204"
+#    read_only: true
+
+# PHP Sandbox service
+#  tanner_phpox:
+#    container_name: tanner_phpox
+#    restart: always
+#    tty: true
+#    networks:
+#     - tanner_local
+#    image: "dtagdevsec/phpox:2204"
+#    read_only: true
+#
+# Tanner API Service
+#  tanner_api:
+#    container_name: tanner_api
+#    restart: always
+#    tmpfs:
+#     - /tmp/tanner:uid=2000,gid=2000
+#    tty: true
+#    networks:
+#     - tanner_local
+#    image: "dtagdevsec/tanner:2204"
+#    read_only: true
+#    volumes:
+#     - /data/tanner/log:/var/log/tanner
+#    command: tannerapi
+#    depends_on:
+#     - tanner_redis
+
+## Tanner Service
+#  tanner:
+#    container_name: tanner
+#    restart: always
+#    tmpfs:
+#     - /tmp/tanner:uid=2000,gid=2000
+#    tty: true
+#    networks:
+#     - tanner_local
+#    ports:
+#     - "8090:8090"
+#    image: "dtagdevsec/tanner:2204"
+#    command: tanner
+#    read_only: true
+#    volumes:
+#     - /data/tanner/log:/var/log/tanner
+#     - /data/tanner/files:/opt/tanner/files
+#    depends_on:
+#     - tanner_api
+##     - tanner_web
+#     - tanner_phpox
+
+# Snare Service
+#  snare:
+#    container_name: snare
+#    restart: always
+#    tty: true
+#    networks:
+#     - tanner_local
+#    ports:
+#     - "80:80"
+#    image: "dtagdevsec/snare:2204"
+#    depends_on:
+#     - tanner
+
+
+##################
+#### NSM
+##################
+
+# Fatt service
+  fatt:
+    container_name: fatt
+    restart: always
+    network_mode: "host"
+    cap_add:
+     - NET_ADMIN
+     - SYS_NICE
+     - NET_RAW
+    image: "dtagdevsec/fatt:2204"
+    volumes:
+     - /data/fatt/log:/opt/fatt/log
+
+# P0f service
+  p0f:
+    container_name: p0f
+    restart: always
+    network_mode: "host"
+    image: "dtagdevsec/p0f:2204"
+    read_only: true
+    volumes:
+     - /data/p0f/log:/var/log/p0f
+
+# Suricata service
+  suricata:
+    container_name: suricata
+    restart: always
+    environment:
+    # For ET Pro ruleset replace "OPEN" with your OINKCODE
+     - OINKCODE=OPEN
+    # Loading externel Rules from URL 
+    # - FROMURL="https://username:password@yoururl.com|https://username:password@otherurl.com"
+    network_mode: "host"
+    cap_add:
+     - NET_ADMIN
+     - SYS_NICE
+     - NET_RAW
+    image: "dtagdevsec/suricata:2204"
+    volumes:
+     - /data/suricata/log:/var/log/suricata
+
+
+##################
+#### Tools
+##################
+
+#### ELK
+## Elasticsearch service
+  elasticsearch:
+    container_name: elasticsearch
+    restart: always
+    environment:
+     - bootstrap.memory_lock=true
+     - ES_JAVA_OPTS=-Xms2048m -Xmx2048m
+     - ES_TMPDIR=/tmp
+    cap_add:
+     - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_limit: 4g
+    ports:
+     - "127.0.0.1:64298:9200"
+    image: "dtagdevsec/elasticsearch:2204"
+    volumes:
+     - /data:/data
+
+## Kibana service
+  kibana:
+    container_name: kibana
+    restart: always
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    mem_limit: 1g
+    ports:
+     - "127.0.0.1:64296:5601"
+    image: "dtagdevsec/kibana:2204"
+
+## Logstash service
+  logstash:
+    container_name: logstash
+    restart: always
+    environment:
+     - LS_JAVA_OPTS=-Xms1024m -Xmx1024m
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+     - /opt/tpot/etc/compose/elk_environment
+    mem_limit: 2g
+    ports:
+     - "5044:5044"
+    image: "dtagdevsec/logstash:2204"
+    volumes:
+     - /data:/data
+
+## Map Redis Service
+  map_redis:
+    container_name: map_redis
+    restart: always
+    stop_signal: SIGKILL
+    tty: true
+    image: "dtagdevsec/redis:2204"
+    read_only: true
+
+## Map Web Service
+  map_web:
+    container_name: map_web
+    restart: always
+    environment:
+     - MAP_COMMAND=AttackMapServer.py
+    env_file:
+     - /opt/tpot/etc/compose/elk_environment
+    stop_signal: SIGKILL
+    tty: true
+    ports:
+     - "127.0.0.1:64299:64299"
+    image: "dtagdevsec/map:2204"
+
+## Map Data Service
+  map_data:
+    container_name: map_data
+    restart: always
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+     - MAP_COMMAND=DataServer_v2.py
+    env_file:
+     - /opt/tpot/etc/compose/elk_environment
+    stop_signal: SIGKILL
+    tty: true
+    image: "dtagdevsec/map:2204"
+#### /ELK
+
+# Ewsposter service
+  ewsposter:
+    container_name: ewsposter
+    restart: always
+    networks:
+     - ewsposter_local
+    environment:
+     - EWS_HPFEEDS_ENABLE=false
+     - EWS_HPFEEDS_HOST=host
+     - EWS_HPFEEDS_PORT=port
+     - EWS_HPFEEDS_CHANNELS=channels
+     - EWS_HPFEEDS_IDENT=user
+     - EWS_HPFEEDS_SECRET=secret
+     - EWS_HPFEEDS_TLSCERT=false
+     - EWS_HPFEEDS_FORMAT=json
+    env_file:
+     - /opt/tpot/etc/compose/elk_environment
+    image: "dtagdevsec/ewsposter:2204"
+    volumes:
+     - /data:/data
+     - /data/ews/conf/ews.ip:/opt/ewsposter/ews.ip
+
+# Nginx service
+  nginx:
+    container_name: nginx
+    restart: always
+    tmpfs:
+     - /var/tmp/nginx/client_body
+     - /var/tmp/nginx/proxy
+     - /var/tmp/nginx/fastcgi
+     - /var/tmp/nginx/uwsgi
+     - /var/tmp/nginx/scgi
+     - /run
+     - /var/lib/nginx/tmp:uid=100,gid=82
+    network_mode: "host"
+      #    ports:
+      #     - "64297:64297"
+      #     - "127.0.0.1:64304:64304"
+    image: "dtagdevsec/nginx:2204"
+    read_only: true
+    volumes:
+     - /data/nginx/cert/:/etc/nginx/cert/:ro
+     - /data/nginx/conf/nginxpasswd:/etc/nginx/nginxpasswd:ro
+     - /data/nginx/log/:/var/log/nginx/
+
+# Spiderfoot service
+  spiderfoot:
+    container_name: spiderfoot
+    restart: always
+    networks:
+     - spiderfoot_local
+    ports:
+     - "127.0.0.1:64303:8080"
+    image: "dtagdevsec/spiderfoot:2204"
+    volumes:
+     - /data/spiderfoot:/home/spiderfoot/.spiderfoot
+
+  webserver:
+    image: httpd:latest
+    container_name: webserver
+    restart: always
+    ports:
+     - "80:80"
+    volumes:
+     - /opt/tpot/etc/htdocs/:/usr/local/apache2/htdocs/
