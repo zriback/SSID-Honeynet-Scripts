@@ -40,9 +40,9 @@ def get_file_size(filename):
     return size
 
 # notifies all the listners at globally defined ip addresses and ports of the new connection
-def notify_listeners(conn_id, conn_ip):
-    message = conn_id + " " + conn_ip
-    print(f'message is {message}')
+def notify_listeners(action, conn_id, conn_ip):
+    message = action + " " + conn_id + " " + conn_ip
+    print(f'Message: {message}')
     for ip in LISTEN_IP_ADDRS:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -58,14 +58,12 @@ def monitor_log(filename):
         new_pos = get_file_size(filename)
         if new_pos != old_pos: # something has been added to the file
             old_pos = new_pos
-            line = get_last_line(filename)
+            items = get_last_line(filename).split()
+            action = items[0]
+            conn_id = items[1]
+            conn_ip = items[2]
+            notify_listeners(action, conn_id, conn_ip)
 
-            # if this line shows us a successfull connection has been made, we need to act
-            if line.split()[0] == 'open':
-                conn_id = line.split()[1]
-                conn_ip = get_second_last_line(filename)
-                # print(f'id={conn_id}, ip={conn_ip}\n')
-                notify_listeners(conn_id, conn_ip)
         else:
             # nothing new in the file, sleep for a bit then try again
             time.sleep(1)

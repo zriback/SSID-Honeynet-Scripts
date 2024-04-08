@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Thomas Nicholson <tnnich@googlemail.com>, 2019 Guilherme Borges <guilhermerosasborges@gmail.com>
+#Copyright (c) 2016 Thomas Nicholson <tnnich@googlemail.com>, 2019 Guilherme Borges <guilhermerosasborges@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -66,6 +66,9 @@ class FrontendSSHTransport(transport.SSHServerTransport, TimeoutMixin):
 
         self.sshParse = None
         self.disconnected = False  # what was this used for
+
+        # part of hooks for keeping track of connections
+        self.id = None
 
         self.peer_ip = None
         self.peer_port: int = 0
@@ -174,6 +177,7 @@ class FrontendSSHTransport(transport.SSHServerTransport, TimeoutMixin):
 
     def connect_to_backend(self, ip, port):
         # connection to the backend starts here
+        
         client_factory = client_transport.BackendSSHFactory()
         client_factory.server = self
 
@@ -355,6 +359,14 @@ class FrontendSSHTransport(transport.SSHServerTransport, TimeoutMixin):
         """
         This seems to be the only reliable place of catching lost connection
         """
+        
+        self.id = self.sshParse.client.id
+        if self.id:  # if it is not None (the default, so an authenticated connection was made)
+            with open('/home/cowrie/markers/conn.log', 'a') as fp:
+               fp.write(f'close {self.id} {self.peer_ip}\n')
+            
+
+
         self.setTimeout(None)
 
         transport.SSHServerTransport.connectionLost(self, reason)

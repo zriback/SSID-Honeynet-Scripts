@@ -115,7 +115,8 @@ class BackendSSHTransport(transport.SSHClientTransport, TimeoutMixin):
         # log this to file
         with open('/home/cowrie/markers/conn.log', 'a') as fp:
             self.id = str(time.time())
-            fp.write(f'open {self.id}\n')
+            peer_ip = self.factory.server.peer_ip
+            fp.write(f'open {self.id} {peer_ip}\n')
 
     def connectionLost(self, reason):
         if self.factory.server.pool_interface:
