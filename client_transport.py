@@ -114,7 +114,7 @@ class BackendSSHTransport(transport.SSHClientTransport, TimeoutMixin):
 
         # log this to file
         with open('/home/cowrie/markers/conn.log', 'a') as fp:
-            self.id = str(time.time())
+            self.id = int(time.time())
             peer_ip = self.factory.server.peer_ip
             fp.write(f'open {self.id} {peer_ip}\n')
 

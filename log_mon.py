@@ -42,7 +42,7 @@ def get_file_size(filename):
 # notifies all the listners at globally defined ip addresses and ports of the new connection
 def notify_listeners(action, conn_id, conn_ip):
     message = action + " " + conn_id + " " + conn_ip
-    print(f'Message: {message}')
+    # print(f'Message: {message}')
     for ip in LISTEN_IP_ADDRS:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

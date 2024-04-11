@@ -363,7 +363,8 @@ class FrontendSSHTransport(transport.SSHServerTransport, TimeoutMixin):
         self.id = self.sshParse.client.id
         if self.id:  # if it is not None (the default, so an authenticated connection was made)
             with open('/home/cowrie/markers/conn.log', 'a') as fp:
-               fp.write(f'close {self.id} {self.peer_ip}\n')
+                conn_time = int(time.time()) - self.id
+                fp.write(f'close {self.id} {self.peer_ip} {conn_time}\n')
             
 
 
