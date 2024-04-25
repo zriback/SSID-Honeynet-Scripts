@@ -47,7 +47,8 @@ def manage_connections(interface, port):
                 captures[conn_id] = tcpdump_proc
             elif action == 'close':
                 tcpdump_proc = captures.get(conn_id)
-                tcpdump_proc.terminate()
+                if not tcpdump_proc is None:
+                    tcpdump_proc.terminate()
                 del captures[conn_id]
             else:
                 # something went really wrong
