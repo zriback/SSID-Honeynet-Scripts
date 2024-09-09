@@ -5,6 +5,12 @@ import subprocess
 import threading
 import queue
 
+import os
+import paramiko
+from scp import SCPClient
+
+BACKEND_IP = '192.168.1.26'
+BACKEND_CAP_LOCATION = '/data/cowrie/captures/webserver'
 LISTEN_INT = '192.168.1.20'
 LISTEN_PORT = 54444
 SAVE_LOCATION = '/data/caps'
@@ -12,6 +18,15 @@ SAVE_LOCATION = '/data/caps'
 # file rotation is broken
 # TCPDUMP_CMD = 'tcpdump -i any -w /etc/caps/{conn_id}.pcap -C 20 -W 54'
 TCPDUMP_CMD = 'tcpdump -i any -w {save_loc}/{conn_id}.pcap'
+
+def scp_file(filepath):
+    ssh = paramiko.SSHClient()
+    ssh.load_system_host_keys()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(BACKEND_IP, port=2222, username='tsec', password='^YHN3edc8ik,!QAZ', look_for_keys=False)
+
+    with SCPClient(ssh.get_transport()) as scp:
+        scp.put(filepath, recursive=False, remote_path=BACKEND_CAP_LOCATION)
 
 # starts a tcpdump that will automatically terminate when receiving FIN packet from the given IP
 # TODO: make that true
@@ -50,6 +65,13 @@ def manage_connections(interface, port):
                 if not tcpdump_proc is None:
                     tcpdump_proc.terminate()
                 del captures[conn_id]
+
+                # if not running on the backend, send there  and delete here
+                if interface != '127.0.0.1':
+                    scp_file(f'{SAVE_LOCATION}/{conn_id}.pcap')
+                    os.remove(f'{SAVE_LOCATION}/{conn_id}.pcap')
+
+
             else:
                 # something went really wrong
                 exit(10)
