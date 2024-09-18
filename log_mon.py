@@ -6,7 +6,7 @@ import os
 import time
 import socket
 
-LOG_FILE = 'markers/conn.log'
+LOG_FILE = '/opt/tpot/etc/markers/conn.log'
 
 LISTEN_IP_ADDRS = ['127.0.0.1', '192.168.1.20']
 LISTEN_PORT = 54444
