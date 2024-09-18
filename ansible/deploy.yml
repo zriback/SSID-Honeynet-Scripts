@@ -1,0 +1,50 @@
+# Ansible playbook for setting up and resetting the honeynet
+---
+
+- name: Set up management program on backend
+  hosts: backend
+  connection: local
+  tasks:
+          - name: Copy management script for backend  
+            ansible.builtin.copy:
+                src: files/manage_captures.py
+                dest: /opt/tpot/etc/manage_captures.py
+                owner: root
+                group: root
+                mode: '0755'
+          - name: Start running management script
+            ansible.builtin.shell: "python3 /opt/tpot/etc/manage_captures.py --listen-int 127.0.0.1 --save-loc /data/cowrie/captures/backend --backend-save-loc /data/cowrie/captures/backend &> /dev/null &"
+            async: 1
+            poll: 0
+          - name: Copy logmon script for backend  
+            ansible.builtin.copy:
+                src: files/log_mon.py
+                dest: /opt/tpot/etc/log_mon.py
+                owner: root
+                group: root
+                mode: '0755'
+          - name: Start running logmon script
+            ansible.builtin.shell: "python3 /opt/tpot/etc/log_mon.py &> /dev/null &"
+            async: 1
+            poll: 0
+
+
+- name: Set up management program on webserver
+  hosts: webserver
+  remote_user: ansible
+  become: yes
+
+  tasks:
+        # Run the script on the webserver
+          - name: Copy over capture script for webserver
+            ansible.builtin.copy:
+                src: files/manage_captures.py
+                dest: /data/caps/manage_captures.py
+                owner: ansible
+                group: ansible
+                mode: '0755'
+          - name: Start running the capture script
+            ansible.builtin.shell: "python3 /data/caps/manage_captures.py --listen-int 192.168.1.20 --save-loc /data/caps --backend-save-loc /data/cowrie/captures/webserver &> /dev/null &"
+            async: 1
+            poll: 0
+

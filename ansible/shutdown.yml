@@ -1,0 +1,22 @@
+# Ansible playbook for shuttown down the honeynet traffic capture scripts
+---
+
+- name: Stop management program on backend
+  hosts: backend
+  connection: local
+  tasks:
+          - name: Kill management script
+            ansible.builtin.shell: "kill -9 $(ps aux | grep \"manage_captures\" | head -n 1 | awk '{print $2}') &> /dev/null"
+          - name: Kill logmon script
+            ansible.builtin.shell: "kill -9 $(ps aux | grep \"log_mon\" | head -n 1 | awk '{print $2}') &> /dev/null"
+
+- name: Stop management program on webserver
+  hosts: webserver
+  remote_user: ansible
+  tasks:
+        # Run the script on the webserver
+          - name: Kill capture script
+            ansible.builtin.shell: "kill -9 $(ps aux | grep \"manage_captures\" | head -n 1 | awk '{print $2}') &> /dev/null"
+
+
+
