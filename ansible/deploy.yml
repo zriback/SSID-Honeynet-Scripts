@@ -48,3 +48,43 @@
             async: 1
             poll: 0
 
+
+- name: Set up management program on FTP server
+  hosts: ftp_server
+  remote_user: ansible
+  become: yes
+
+  tasks:
+        # Run the script on the webserver
+          - name: Copy over capture script for ftp server
+            ansible.builtin.copy:
+                src: files/manage_captures.py
+                dest: /data/caps/manage_captures.py
+                owner: ansible
+                group: ansible
+                mode: '0755'
+          - name: Start running the capture script
+            ansible.builtin.shell: "python3 /data/caps/manage_captures.py --listen-int 192.168.1.27 --save-loc /data/caps --backend-save-loc /data/cowrie/captures/ftp-server &> /dev/null &"
+            async: 1
+            poll: 0
+
+
+- name: Set up management program on database server
+  hosts: database
+  remote_user: ansible
+  become: yes
+
+  tasks:
+        # Run the script on the webserver
+          - name: Copy over capture script for database server
+            ansible.builtin.copy:
+                src: files/manage_captures.py
+                dest: /data/caps/manage_captures.py
+                owner: ansible
+                group: ansible
+                mode: '0755'
+          - name: Start running the capture script
+            ansible.builtin.shell: "python3 /data/caps/manage_captures.py --listen-int 192.168.1.36 --save-loc /data/caps --backend-save-loc /data/cowrie/captures/database &> /dev/null &"
+            async: 1
+            poll: 0
+

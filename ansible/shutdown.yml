@@ -11,8 +11,9 @@
             ansible.builtin.shell: "kill -9 $(ps aux | grep \"log_mon\" | head -n 1 | awk '{print $2}') &> /dev/null"
 
 - name: Stop management program on webserver
-  hosts: webserver
+  hosts: webserver, ftp_server, database
   remote_user: ansible
+  become: yes
   tasks:
         # Run the script on the webserver
           - name: Kill capture script
