@@ -12,6 +12,7 @@
 
 - name: Stop management program on remote Linux hosts
   hosts: webserver, ftp_server, database
+  ignore_unreachable: true
   remote_user: ansible
   become: yes
   tasks:
@@ -21,7 +22,8 @@
 
 
 - name: Stop management program on remote Windows hosts
-  hosts: windows10
+  hosts: windows10, winserv
+  ignore_unreachable: true
   remote_user: ansible
   tasks:
         # Run the script on the boxes

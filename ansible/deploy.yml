@@ -33,7 +33,6 @@
   hosts: webserver
   remote_user: ansible
   become: yes
-
   tasks:
         # Run the script on the webserver
           - name: Copy over capture script for webserver
@@ -51,9 +50,9 @@
 
 - name: Set up management program on FTP server
   hosts: ftp_server
+  ignore_unreachable: true
   remote_user: ansible
   become: yes
-
   tasks:
         # Run the script on the webserver
           - name: Copy over capture script for ftp server
@@ -71,6 +70,7 @@
 
 - name: Set up management program on database server
   hosts: database
+  ignore_unreachable: yes
   remote_user: ansible
   become: yes
 
@@ -91,6 +91,7 @@
 
 - name: Set up management program on Windows10 host
   hosts: windows10
+  ignore_unreachable: true
   remote_user: ansible
   tasks:
           - name: Copy over capture script for Windows10
@@ -105,4 +106,23 @@
 
             async: 1
             poll: 0
-           
+
+
+- name: Set up management program on Windows Server
+  hosts: winserv
+  ignore_unreachable: true
+  remote_user: ansible
+  tasks:
+          - name: Copy over capture script for Windows Server
+            ansible.windows.win_copy:
+                src: files/manage_captures_win.py
+                dest: C:\Users\ansible\caps\manage_captures_win.py
+          - name: Start running the capture script
+            ansible.windows.win_powershell:
+                script: |
+                  $proc = Start-Process -FilePath py -ArgumentList @( "C:\\Users\\ansible\\caps\\manage_captures_win.py", "--listen-int", "192.168.1.37", "--save-loc", "C:\\Users\\ansible\\caps", "--backend-save-loc", "/data/cowrie/captures/winserv") -PassThru
+                  $proc | Export-Clixml -Path "C:\\Users\\ansible\\caps\\manage_captures_process_handle.xml"
+
+            async: 1
+            poll: 0
+ 
