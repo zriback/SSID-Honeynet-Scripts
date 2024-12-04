@@ -10,14 +10,26 @@
           - name: Kill logmon script
             ansible.builtin.shell: "kill -9 $(ps aux | grep \"log_mon\" | head -n 1 | awk '{print $2}') &> /dev/null"
 
-- name: Stop management program on webserver
+- name: Stop management program on remote Linux hosts
   hosts: webserver, ftp_server, database
+  ignore_unreachable: true
   remote_user: ansible
   become: yes
   tasks:
-        # Run the script on the webserver
+        # Run the script on the boxes
           - name: Kill capture script
             ansible.builtin.shell: "kill -9 $(ps aux | grep \"manage_captures\" | head -n 1 | awk '{print $2}') &> /dev/null"
 
 
-
+- name: Stop management program on remote Windows hosts
+  hosts: windows10, winserv
+  ignore_unreachable: true
+  remote_user: ansible
+  tasks:
+        # Run the script on the boxes
+          - name: Kill capture script
+            ansible.windows.win_powershell:
+                # import the process handle from the XML saved location
+                script: |
+                  $proc = Import-Clixml -Path C:\Users\ansible\caps\manage_captures_process_handle.xml
+                  $proc | Stop-Process

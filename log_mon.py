@@ -8,7 +8,7 @@ import socket
 
 LOG_FILE = '/opt/tpot/etc/markers/conn.log'
 
-LISTEN_IP_ADDRS = ['127.0.0.1', '192.168.1.20', '192.168.1.27', '192.168.1.36']
+LISTEN_IP_ADDRS = ['127.0.0.1', '192.168.1.20', '192.168.1.27', '192.168.1.36', '192.168.1.29']
 LISTEN_PORT = 54444
 
 # returns the last line of the passed file
