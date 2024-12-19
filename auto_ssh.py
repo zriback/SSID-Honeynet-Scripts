@@ -7,6 +7,11 @@ import random
 LINUX_OS = 0
 WINDOWS_OS = 1
 
+DEFAULT_COLOR = '\x1b[39m'
+CYAN_COLOR = '\x1b[36m'
+BLUE_COLOR = '\x1b[34m'
+GREEN_COLOR = '\x1b[32m'
+
 global prompt
 primary_prompt = 'PROMPT1$>'
 
@@ -39,7 +44,7 @@ def send_command(channel, command, password_prompt=None, password=None, os=LINUX
     if command == 'exit':
         prompt = primary_prompt
 
-    print('Sending:', command)
+    print(CYAN_COLOR + 'Sending:', command + DEFAULT_COLOR)
     if os==0:
         channel.send(command + '\n')
     else:
@@ -76,7 +81,7 @@ def send_command(channel, command, password_prompt=None, password=None, os=LINUX
             continue
         cleaned_lines.append(line)
     return_value = '\n'.join(cleaned_lines).strip()
-    print(return_value)
+    print(return_value + DEFAULT_COLOR)
     return return_value
 
 
@@ -157,8 +162,7 @@ pivot_servers = [
         ],
         'get_flag_commands' : [
             'sudo mysql -u root',
-            'show databases;,use employees;,show tables;,select * from employees;',
-            'quit'
+            'show databases;,use employees;,show tables;,select * from employees;,quit'
         ]
     },
     {
@@ -167,7 +171,21 @@ pivot_servers = [
         'username': 'ftp-user',
         'password': 'ftp-pass',
         'prompt'  : 'PROMPT5$>',
-        'os'      : LINUX_OS
+        'os'      : LINUX_OS,
+        'info_gather_commands' : [
+            'ls',
+            'whoami',
+            'ifconfig',
+            'systemctl --no-pager status vsftpd',
+            'ps aux | grep ftp',
+            'cat /etc/vsftpd.conf'
+            'ls /srv',
+            'ls /srv/ftp'
+        ],
+        'get_flag_commands' : [
+            'cd /srv/ftp,cat flag.txt',
+            'cat /srv/ftp/flag.txt'
+        ]
     },
     {
         'name'   : 'Windows Host',
@@ -175,15 +193,41 @@ pivot_servers = [
         'username': 'user',
         'password': 'win-pass',
         'prompt'  : 'PROMPT3$>',
-        'os'      : WINDOWS_OS
+        'os'      : WINDOWS_OS,
+        'info_gather_commands' : [
+            'pwd',
+            'echo $HOME,cd C:\\users\\user\\Desktop,dir',
+            'dir',
+            'Get-ComputerInfo',
+            'Get-HotFix',
+            'Get-NetIPConfiguration',
+            'Get-LocalUser',
+            'Get-MpComputerStatus'
+        ],
+        'get_flag_commands' : [
+            'cd C:\\users\\user\\Desktop,cat flag.txt'
+        ]
     },
     {
         'name'   : 'Windows Server',
-        'hostname': '192.168.1.24',
+        'hostname': '192.168.1.37',
         'username': 'Administrator',
         'password': 'Admin123!',
         'prompt'  : 'PROMPT4$>',
-        'os'      : WINDOWS_OS
+        'os'      : WINDOWS_OS,
+        'info_gather_commands' : [
+            'Get-WindowsFeature',
+            'Get-Service',
+            'Get-NetIPAddress',
+            'Get-DnsServerZone',
+            'Get-ADDomain',
+            'Get-NetFirewallRule',
+            'Get-Volume',
+            'Get-LocalGroupMember -Group Administrators'
+        ],
+        'get_flag_commands' : [
+            'cd C:\\users\\Administrator\\Desktop,cat flag.txt'
+        ]
     } 
 ]
 
@@ -201,9 +245,17 @@ firsthop_info_gathering_commands = [
 
 def random_command_sleep():
     sleep_time = random.uniform(1,7)
-    print(f'Sleeping for {sleep_time:.2f} seconds')
+    print(BLUE_COLOR + f'Sleeping for {sleep_time:.2f} seconds' + DEFAULT_COLOR)
     time.sleep(sleep_time)
 
+
+def send_command_string(channel, command_string, os, old_prompt=None):
+    global prompt
+    for command in command_string.split(','):
+        if command == 'quit' or command =='exit':
+            prompt = old_prompt
+        send_command(channel, command, os=os)
+        random_command_sleep()
 
 def main():
     # global prompt variable for keeping track of current connection's prompt
@@ -228,52 +280,60 @@ def main():
     set_prompt(prompt, channel, LINUX_OS)
 
     # send commands on first pivot host
+    print(GREEN_COLOR + 'First hop info gathering commands' + DEFAULT_COLOR)
     for command_string in random.sample(firsthop_info_gathering_commands, 5):
-        for command in command_string.split(','):
-            send_command(channel, command, os=LINUX_OS)
-            random_command_sleep()
-    random_command_sleep()
-
-    # now randomly pivot to another one of the hosts
-    # for now just do the database
-    pivot_database()
-
-    # randomly do info gathering commands on the remote host
-    server_info = pivot_servers[0]
-    for command_string in random.sample(server_info['info_gather_commands'], 5):
-        for command in command_string.split(','):
-            send_command(channel, command, os=server_info['os'])
-            random_command_sleep()
-    random_command_sleep()
-
-    # now do get flag commands
-    change_command = server_info['get_flag_commands'][0]
-    old_prompt = prompt
-    prompt = 'mysql>'
-    send_command(channel, change_command, password_prompt='[sudo] password', password='uwsit2021', os=server_info['os'])
-
-    mysql_commands = server_info['get_flag_commands'][1]
-    for command in mysql_commands.split(','):
-        send_command(channel, command, os=server_info['os'])
+        send_command_string(channel, command_string, LINUX_OS)
         random_command_sleep()
-    random_command_sleep()
 
-    quit_command = server_info['get_flag_commands'][2]
-    prompt = old_prompt
-    send_command(channel, quit_command, os=server_info['os'])
+    pivot_choice = random.randint(0,3)
+    # get rid of this
+    pivot_choice = 3
 
-    random_command_sleep()
+    print(GREEN_COLOR + 'Pivoting...' + DEFAULT_COLOR)
+    if pivot_choice == 0:
+        pivot_database()
+    elif pivot_choice == 1:  # TODO randomly decide to use FTP here for this instead of SSH
+        pivot_ftp_ssh()
+    elif pivot_choice == 2:
+        pivot_windows_host()
+    elif pivot_choice == 3:
+        pivot_windows_server()
+
+    print(GREEN_COLOR + 'Info gathering commands on the remote host' + DEFAULT_COLOR)
+    # randomly do info gathering commands on the remote host
+    server_info = pivot_servers[pivot_choice]
+    for command_string in random.sample(server_info['info_gather_commands'], 5):
+        send_command_string(channel, command_string, server_info['os'])
+
+    print(GREEN_COLOR + 'Get flag commands on remote host' + DEFAULT_COLOR)
+    # now do get flag commands
+    # 0=database, 1=ftp, 2=windows host, 3=windows server
+    if pivot_choice == 0:  # database
+        change_command = server_info['get_flag_commands'][0]
+        old_prompt = prompt
+        prompt = 'mysql>'
+        send_command(channel, change_command, password_prompt='[sudo] password', password='uwsit2021', os=server_info['os'])
+        send_command_string(channel, server_info['get_flag_commands'][1], server_info['os'], old_prompt=old_prompt)
+        random_command_sleep()
+    elif pivot_choice == 1:  # ftp server
+        command_choice = random.randint(0,1)
+        send_command_string(channel, server_info['get_flag_commands'][command_choice], server_info['os'])
+        random_command_sleep()
+    elif pivot_choice == 2:  # windows host
+        send_command_string(channel, server_info['get_flag_commands'][0], server_info['os'])
+        random_command_sleep()
+    elif pivot_choice == 3:  # windows server
+        send_command_string(channel, server_info['get_flag_commands'][0], server_info['os'])
+        random_command_sleep()
+    else:
+        print('Should not be here...')
+
+    print(GREEN_COLOR + 'Burn off the pivot host' + DEFAULT_COLOR)
+    # Burn off the pivot host
+    send_command(channel, 'exit', os=server_info['os'])  # when running with exit it is already assumed that we are burning to the first hop host
 
     # Close the SSH connection to the first server
     ssh_client.close()
-
-    # TODO
-    # Wow this worked!
-    # Next is to clean this up and make it work with all the other boxes too. It does not have to be fully portable for each random box
-    # that might be chosen or every path that it might go down by it would be good to make it as good as possible
-    # First step is to add info gathering and get flag commands for each other pivot.
-    # Then, try and make them all work together. Probably be fine to have a switch statement to have individual logic to deal
-    # with each one since there are only four options for that.
 
 
 if __name__ == '__main__':
