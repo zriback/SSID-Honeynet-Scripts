@@ -27,8 +27,7 @@ def scp_file(filepath, send_location):
     with SCPClient(ssh.get_transport()) as scp:
         scp.put(filepath, recursive=False, remote_path=send_location)
 
-# starts a tcpdump that will automatically terminate when receiving FIN packet from the given IP
-# TODO: make that true
+# starts a tcpdump 
 def start_tcpdump(conn_id, conn_ip, save_location):
     cmd = TCPDUMP_CMD.format(save_loc=save_location, conn_id=conn_id)
 
