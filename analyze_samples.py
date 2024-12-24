@@ -4,9 +4,6 @@ import sys
 import numpy as np
 import pickle
 
-# Directory containing .pcap files
-TRAFFIC_SAMPLES_PATH = 'C:\\Users\\zacha\\vscode\\Honeynet-Research\\SSID-Honeynet-Scripts\\captures'
-
 # Pickle output file
 PICKLE_OUTPUT_FILE = 'output.obj'
 
@@ -126,7 +123,7 @@ def analyze_directory(directory: str):
     host_ips = []
     for dir in os.listdir(directory):
         host_ip = get_host_ip_from_dirname(dir)
-        if host_ip is None:  # we don't care about or know about this host
+        if host_ip is None:  # we don't care about or know about this host or file
             continue
         host_ips.append(host_ip)
         if primary_dir is None:  # this is a first dir we can use to iterate over later
@@ -162,7 +159,7 @@ def main():
 
     print(f'{GREEN_COLOR}Analyzing...{DEFAULT_COLOR}')
 
-    analyze_directory(TRAFFIC_SAMPLES_PATH)
+    analyze_directory(traffic_sample_filepath)
 
     print(f'{GREEN_COLOR}Results have been saved to {PICKLE_OUTPUT_FILE}{DEFAULT_COLOR}')
 
