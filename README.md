@@ -40,6 +40,13 @@ Part of this uses Cowrie, an SSH Honeypot. Further information on Cowrie is avai
 
  In order to collect large amounts of pivot attack samples using this honeynet, an externally run script is used that is included in this repository as ```auto_ssh.py```. This script should be run on a host machine located outside of the honeynet. It has a pre-made list of commands and methods for accessing the honeynet, running information gathering commands, pivoting to a second host, running more information gathering commands, and then running certain "flag getting" commands to locate and read out the flag.txt file that was put on all machines in the network. Overall, the script is meant to simulate a real human attacker carrying out stepping-stone attacks in the honeynet.
 
+ Note that for the simulated attacks to work, the attacker's (location where this script is being run) must be explicitly white-listed on the honeynet. By default, only RIT's network (129.21.0.0/16) is allowed. To allow another IP address to access the honeynet via SSH, use the following iptables commands.
+
+ ```
+ iptables -I DOCKER-USER -s [ip] -p tcp --dport 22 -j ACCEPT
+ iptables -I DOCKER-USER -d [ip] -p tcp --dport 22 -j ACCEPT
+ ```
+
  Each and every attacker connection results in pcap files saved from every relavant host on the honeynet. The output structure might look like:
 
 ```
