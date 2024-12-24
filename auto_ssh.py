@@ -11,6 +11,7 @@ DEFAULT_COLOR = '\x1b[39m'
 CYAN_COLOR = '\x1b[36m'
 BLUE_COLOR = '\x1b[34m'
 GREEN_COLOR = '\x1b[32m'
+RED_COLOR = '\x1b[31m'
 BOLD_FONT = '\x1b[1m'
 DEFAULT_ALL = '\x1b[0m'
 
@@ -186,7 +187,8 @@ pivot_servers = [
             'ps aux | grep ftp',
             'cat /etc/vsftpd.conf'
             'ls /srv',
-            'ls /srv/ftp'
+            'ls /srv/ftp',
+            'cat /etc/passwd'
         ],
         'get_flag_commands' : [
             'cd /srv/ftp,cat flag.txt',
@@ -242,7 +244,8 @@ pivot_servers = [
             'Get-ADDomain',
             'Get-NetFirewallRule',
             'Get-Volume',
-            'Get-LocalGroupMember -Group Administrators'
+            'Get-LocalGroupMember -Group Administrators',
+            'Get-ExecutionPolicy'
         ],
         'get_flag_commands' : [
             'cd C:\\users\\Administrator\\Desktop,cat flag.txt'
@@ -281,12 +284,16 @@ def collect_sample(sample_verbose: bool):
     verbose = sample_verbose
 
     # Initialize SSH connection to the first server
-    ssh_client, channel = ssh_into_server(
-        hostname=first_server['hostname'],
-        username=first_server['username'],
-        password=first_server['password'],
-        port=first_server['port']
-    )
+    try:
+        ssh_client, channel = ssh_into_server(
+            hostname=first_server['hostname'],
+            username=first_server['username'],
+            password=first_server['password'],
+            port=first_server['port']
+        )
+    except:
+        print(RED_COLOR + 'Something went wrong connecting to the remote host...' + DEFAULT_COLOR)
+        return
 
     pivot_database = partial(ssh_chain, channel=channel, server_info=pivot_servers[0], os=LINUX_OS)
     pivot_ftp = partial(ftp_chain, channel=channel, server_info=pivot_servers[1])
@@ -380,7 +387,7 @@ def collect_samples(iterations: int, verbose: bool = False):
 
 
 def main():
-    collect_samples(10)
+    collect_samples(200)
 
 if __name__ == '__main__':
     main()
