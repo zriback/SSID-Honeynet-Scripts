@@ -79,10 +79,11 @@ To load the data from multiple attacker sessions from ```output.obj``` into a li
 import pickle
 
 all_sessions_data = []
+f = open('output.obj', 'rb')
 try:
-    with open('output.obj', 'rb') as f:
+    while True:
         session_data = pickle.load(f)
         all_sessions_data.append(session_data)
 except EOFError:
-    pass
+    f.close()
 ```
